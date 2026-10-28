@@ -14,4 +14,15 @@ class Server {
     required this.ram,
     required this.disk,
   });
+
+    factory Server.fromJson(Map<String, dynamic> json) {
+    return Server(
+      name: json['name'] as String,
+      ip: json['ip'] as String,
+      online: json['online'] as bool,
+      cpu: (json['cpu'] as num).toDouble(),
+      ram: (json['ram'] as num).toDouble(),
+      disk: (json['disk'] as num).toDouble(),
+    );
+  }
 }
