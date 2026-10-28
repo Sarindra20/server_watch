@@ -1,17 +1,16 @@
-# server_watch
+# ServerWatch
 
-A new Flutter project.
+Application mobile de supervision de serveurs (Flutter).
 
-## Getting Started
+## Fonctionnalités actuelles (phase 1)
+- Liste des serveurs avec état en ligne / hors ligne
+- Détail d'un serveur : CPU, RAM, disque
+- Ajout et suppression d'un serveur
+- Données fictives (pas encore d'API)
 
-This project is a starting point for a Flutter application.
+## Prochaines étapes
+- Phase 2 : API FastAPI + base PostgreSQL
+- Phase 3 : script de mesure + notifications push
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Technologies
+Flutter (Dart), puis FastAPI et PostgreSQL
