@@ -3,13 +3,13 @@ import 'widgets/server_card.dart';
 import 'screens/server_detail_screen.dart';
 import 'models/server.dart';
 import 'screens/add_server_screen.dart';
-
+import 'services/api_service.dart';
 const List<Server> mockServers = [
   Server(
     name: 'srv-web-01',
     ip: '192.168.1.10',
     online: true,
-    cpu: 42,
+    cpu: 15,
     ram: 61,
     disk: 55,
   ),
@@ -62,8 +62,36 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Server> _servers = List.of(mockServers);
+    List<Server> _servers = [];
+  bool _loading = true;
+  String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadServers();
+  }
+
+  Future<void> _loadServers() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final servers = await ApiService.fetchServers();
+      if (!mounted) return;
+      setState(() {
+        _servers = servers;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = "Impossible de joindre l'API.\nVérifie qu'elle est lancée.";
+        _loading = false;
+      });
+    }
+  }
   Widget _summaryItem(String label, int count, Color color) {
     return Card(
       child: Padding(
@@ -92,6 +120,9 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('🖥️ Server Watch'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+                actions: [
+          IconButton(onPressed: _loadServers, icon: const Icon(Icons.refresh)),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -107,7 +138,25 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         child: const Icon(Icons.add),
       ),
-      body: Column(
+            body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.cloud_off, size: 48),
+                      const SizedBox(height: 12),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _loadServers,
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
