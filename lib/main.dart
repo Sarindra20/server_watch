@@ -146,10 +146,17 @@ class _HomeScreenState extends State<HomeScreen> {
             context,
             MaterialPageRoute(builder: (context) => const AddServerScreen()),
           );
+                    if (!mounted) return;
           if (newServer != null) {
-            setState(() {
-              _servers.add(newServer);
-            });
+            try {
+              await ApiService.addServer(newServer.name, newServer.ip);
+              await _loadServers(silent: true);
+            } catch (e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Impossible d'ajouter le serveur")),
+              );
+            }
           }
         },
         child: const Icon(Icons.add),
@@ -191,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, index) {
                 final server = _servers[index];
                 return Dismissible(
-                  key: ValueKey('${server.name}-${server.ip}'),
+                  key: ValueKey(server.id),
                   direction: DismissDirection.endToStart,
                   background: Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -203,13 +210,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  onDismissed: (direction) {
+                                  onDismissed: (direction) async {
                     setState(() {
                       _servers.removeAt(index);
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
                       SnackBar(content: Text('${server.name} supprimé')),
                     );
+                    try {
+                      await ApiService.deleteServer(server.id!);
+                    } catch (e) {
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Suppression impossible')),
+                      );
+                      await _loadServers(silent: true);
+                    }
                   },
                   child: ServerCard(
                     server: server,

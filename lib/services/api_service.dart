@@ -15,4 +15,21 @@ class ApiService {
         .map((json) => Server.fromJson(json as Map<String, dynamic>))
         .toList();
   }
+    static Future<void> addServer(String name, String ip) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/servers'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'name': name, 'ip': ip}),
+    );
+    if (response.statusCode != 201) {
+      throw Exception('Erreur API : ${response.statusCode}');
+    }
+  }
+
+  static Future<void> deleteServer(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/servers/$id'));
+    if (response.statusCode != 204) {
+      throw Exception('Erreur API : ${response.statusCode}');
+    }
+  }
 }
