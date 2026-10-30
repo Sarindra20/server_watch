@@ -4,6 +4,8 @@ import 'screens/server_detail_screen.dart';
 import 'models/server.dart';
 import 'screens/add_server_screen.dart';
 import 'services/api_service.dart';
+import 'dart:async';
+
 const List<Server> mockServers = [
   Server(
     name: 'srv-web-01',
@@ -17,7 +19,7 @@ const List<Server> mockServers = [
     name: 'srv-db-01',
     ip: '192.168.1.11',
     online: true,
-    cpu: 78,
+    cpu: 58,
     ram: 83,
     disk: 70,
   ),
@@ -65,24 +67,38 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Server> _servers = [];
   bool _loading = true;
   String? _error;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadServers();
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _loadServers(silent: true),
+    );
   }
 
-  Future<void> _loadServers() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadServers({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final servers = await ApiService.fetchServers();
       if (!mounted) return;
       setState(() {
         _servers = servers;
         _loading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
