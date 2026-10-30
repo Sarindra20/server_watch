@@ -1,37 +1,15 @@
-import 'package:flutter/material.dart';
-import 'widgets/server_card.dart';
-import 'screens/server_detail_screen.dart';
-import 'models/server.dart';
-import 'screens/add_server_screen.dart';
-import 'services/api_service.dart';
 import 'dart:async';
 
-const List<Server> mockServers = [
-  Server(
-    name: 'srv-web-01',
-    ip: '192.168.1.10',
-    online: true,
-    cpu: 15,
-    ram: 61,
-    disk: 55,
-  ),
-  Server(
-    name: 'srv-db-01',
-    ip: '192.168.1.11',
-    online: true,
-    cpu: 58,
-    ram: 83,
-    disk: 70,
-  ),
-  Server(
-    name: 'srv-backup',
-    ip: '192.168.1.12',
-    online: false,
-    cpu: 0,
-    ram: 0,
-    disk: 90,
-  ),
-];
+import 'package:flutter/material.dart';
+
+import 'models/server.dart';
+import 'screens/add_server_screen.dart';
+import 'screens/server_detail_screen.dart';
+import 'services/api_service.dart';
+import 'theme.dart';
+import 'widgets/app_logo.dart';
+import 'widgets/server_card.dart';
+
 void main() {
   runApp(const ServerWatchApp());
 }
@@ -42,15 +20,9 @@ class ServerWatchApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Server Watch',
+      title: 'ServerWatch',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 21, 10, 41),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildTheme(),
       home: const HomeScreen(),
     );
   }
@@ -64,7 +36,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-    List<Server> _servers = [];
+  List<Server> _servers = [];
   bool _loading = true;
   String? _error;
   Timer? _timer;
@@ -108,18 +80,28 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-  Widget _summaryItem(String label, int count, Color color) {
+
+  Widget _summaryItem(String label, int count, Color color, IconData icon) {
     return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Column(
           children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
             Text(
               '$count',
               style: TextStyle(
-                  fontSize: 26, fontWeight: FontWeight.bold, color: color),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            Text(label),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
           ],
         ),
       ),
@@ -134,14 +116,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🖥️ Server Watch'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-                actions: [
-          IconButton(onPressed: _loadServers, icon: const Icon(Icons.refresh)),
+        title: Row(
+          children: [
+            const AppLogo(size: 34),
+            const SizedBox(width: 10),
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                children: [
+                  TextSpan(
+                    text: 'Server',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  TextSpan(
+                    text: 'Watch',
+                    style: TextStyle(color: kAccent),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => _loadServers(),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-              onPressed: () async {
+        onPressed: () async {
           final messenger = ScaffoldMessenger.of(context);
           final Server? newServer = await Navigator.push<Server>(
             context,
@@ -154,14 +158,16 @@ class _HomeScreenState extends State<HomeScreen> {
               await _loadServers(silent: true);
             } catch (e) {
               messenger.showSnackBar(
-                const SnackBar(content: Text("Impossible d'ajouter le serveur")),
+                const SnackBar(
+                  content: Text("Impossible d'ajouter le serveur"),
+                ),
               );
             }
           }
         },
         child: const Icon(Icons.add),
       ),
-            body: _loading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
@@ -173,78 +179,106 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(_error!, textAlign: TextAlign.center),
                       const SizedBox(height: 12),
                       ElevatedButton(
-                        onPressed: _loadServers,
+                        onPressed: () => _loadServers(),
                         child: const Text('Réessayer'),
                       ),
                     ],
                   ),
                 )
               : Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-            child: Row(
-              children: [
-                Expanded(child: _summaryItem('Total', total, Colors.blue)),
-                Expanded(child: _summaryItem('En ligne', online, Colors.green)),
-                Expanded(child: _summaryItem('Hors ligne', offline, Colors.red)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _servers.length,
-              itemBuilder: (context, index) {
-                final server = _servers[index];
-                return Dismissible(
-                  key: ValueKey(server.id),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.only(right: 20),
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _summaryItem(
+                              'Total',
+                              total,
+                              Colors.blue,
+                              Icons.dns_rounded,
+                            ),
+                          ),
+                          Expanded(
+                            child: _summaryItem(
+                              'En ligne',
+                              online,
+                              Colors.green,
+                              Icons.check_circle_rounded,
+                            ),
+                          ),
+                          Expanded(
+                            child: _summaryItem(
+                              'Hors ligne',
+                              offline,
+                              Colors.red,
+                              Icons.error_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.delete, color: Colors.white),
-                  ),
-                                  onDismissed: (direction) async {
-                    setState(() {
-                      _servers.removeAt(index);
-                    });
-                    final messenger = ScaffoldMessenger.of(context);
-                    messenger.showSnackBar(
-                      SnackBar(content: Text('${server.name} supprimé')),
-                    );
-                    try {
-                      await ApiService.deleteServer(server.id!);
-                    } catch (e) {
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Suppression impossible')),
-                      );
-                      await _loadServers(silent: true);
-                    }
-                  },
-                  child: ServerCard(
-                    server: server,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ServerDetailScreen(server: server),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _servers.length,
+                        itemBuilder: (context, index) {
+                          final server = _servers[index];
+                          return Dismissible(
+                            key: ValueKey(server.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.only(right: 20),
+                              alignment: Alignment.centerRight,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
+                            ),
+                            onDismissed: (direction) async {
+                              setState(() {
+                                _servers.removeAt(index);
+                              });
+                              final messenger = ScaffoldMessenger.of(context);
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('${server.name} supprimé'),
+                                ),
+                              );
+                              try {
+                                await ApiService.deleteServer(server.id!);
+                              } catch (e) {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Suppression impossible'),
+                                  ),
+                                );
+                                await _loadServers(silent: true);
+                              }
+                            },
+                            child: ServerCard(
+                              server: server,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ServerDetailScreen(server: server),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 }
