@@ -141,19 +141,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
+              onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
           final Server? newServer = await Navigator.push<Server>(
             context,
             MaterialPageRoute(builder: (context) => const AddServerScreen()),
           );
-                    if (!mounted) return;
+          if (!mounted) return;
           if (newServer != null) {
             try {
               await ApiService.addServer(newServer.name, newServer.ip);
               await _loadServers(silent: true);
             } catch (e) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 const SnackBar(content: Text("Impossible d'ajouter le serveur")),
               );
             }
