@@ -3,6 +3,11 @@ import time
 
 import psutil
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "api", ".env"))
+API_KEY = os.getenv("API_KEY", "")
+HEADERS = {"X-API-Key": API_KEY}
 
 API_URL = "http://127.0.0.1:8000"
 SERVER_ID = 1          # l'identifiant du serveur dans la base
