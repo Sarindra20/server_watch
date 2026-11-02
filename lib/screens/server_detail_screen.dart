@@ -50,8 +50,17 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
         _metrics = metrics;
         _incidents = incidents;
       });
-    } catch (_) {
-      // on garde les dernières données affichées
+    } catch (e) {
+      debugPrint('Erreur de rafraîchissement : $e');
+      if (!mounted) return;
+      // Affiche l'erreur en rouge en bas de l'écran si l'API bloque
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur de rafraîchissement : $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -121,6 +130,38 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
             ),
             const SizedBox(height: 4),
             Text(server.ip),
+            if (server.inAlert) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text(
+                          'Alerte',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    for (final alert in server.alerts) Text(alert),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             MetricBar(label: 'CPU', value: server.cpu),
             MetricBar(label: 'RAM', value: server.ram),

@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/incident.dart';
 import '../models/metric.dart';
 import '../models/server.dart';
-import '../models/incident.dart';
+
 class ApiService {
   static const String baseUrl = 'http://127.0.0.1:8000';
 
@@ -19,8 +20,9 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Erreur API : ${response.statusCode}');
     }
-    final List<dynamic> data = jsonDecode(response.body);
-    return data
+    final decoded = jsonDecode(response.body);
+    if (decoded == null || decoded is! List) return [];
+    return decoded
         .map((json) => Server.fromJson(json as Map<String, dynamic>))
         .toList();
   }
@@ -31,7 +33,11 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Erreur API : ${response.statusCode}');
     }
-    return Server.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    final decoded = jsonDecode(response.body);
+    if (decoded == null || decoded is! Map) {
+      throw Exception('Réponse du serveur invalide ou vide');
+    }
+    return Server.fromJson(Map<String, dynamic>.from(decoded));
   }
 
   static Future<List<Metric>> fetchMetrics(int serverId,
@@ -43,8 +49,13 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Erreur API : ${response.statusCode}');
     }
-    final List<dynamic> data = jsonDecode(response.body);
-    return data
+    
+    final decoded = jsonDecode(response.body);
+    if (decoded == null || decoded is! List) {
+      return [];
+    }
+
+    return decoded
         .map((json) => Metric.fromJson(json as Map<String, dynamic>))
         .toList();
   }
@@ -70,7 +81,7 @@ class ApiService {
     }
   }
 
-    static Future<List<Incident>> fetchIncidents(int serverId) async {
+  static Future<List<Incident>> fetchIncidents(int serverId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/servers/$serverId/incidents'),
       headers: _headers,
@@ -78,8 +89,13 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Erreur API : ${response.statusCode}');
     }
-    final List<dynamic> data = jsonDecode(response.body);
-    return data
+
+    final decoded = jsonDecode(response.body);
+    if (decoded == null || decoded is! List) {
+      return [];
+    }
+
+    return decoded
         .map((json) => Incident.fromJson(json as Map<String, dynamic>))
         .toList();
   }

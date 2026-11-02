@@ -6,6 +6,7 @@ class Server {
   final double cpu;
   final double ram;
   final double disk;
+  final List<String> alerts;
 
   const Server({
     this.id,
@@ -15,7 +16,10 @@ class Server {
     required this.cpu,
     required this.ram,
     required this.disk,
+    this.alerts = const [],
   });
+
+  bool get inAlert => online && alerts.isNotEmpty;
 
   factory Server.fromJson(Map<String, dynamic> json) {
     return Server(
@@ -26,6 +30,9 @@ class Server {
       cpu: (json['cpu'] as num).toDouble(),
       ram: (json['ram'] as num).toDouble(),
       disk: (json['disk'] as num).toDouble(),
+      alerts: (json['alerts'] as List<dynamic>? ?? [])
+          .map((a) => a as String)
+          .toList(),
     );
   }
 }

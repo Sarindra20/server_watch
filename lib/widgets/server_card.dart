@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/server.dart';
 
 class ServerCard extends StatelessWidget {
@@ -9,8 +10,16 @@ class ServerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor =
-        server.online ? Colors.green.shade600 : Colors.red.shade600;
+    final Color statusColor = !server.online
+        ? Colors.red.shade600
+        : server.inAlert
+        ? Colors.orange.shade600
+        : Colors.green.shade600;
+    final String statusLabel = !server.online
+        ? 'Hors ligne'
+        : server.inAlert
+        ? 'Alerte'
+        : 'En ligne';
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -36,25 +45,30 @@ class ServerCard extends StatelessWidget {
                         Text(
                           server.name,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(server.ip),
                       ],
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      server.online ? 'En ligne' : 'Hors ligne',
+                      statusLabel,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -84,8 +98,8 @@ class _MiniBar extends StatelessWidget {
     final Color color = value >= 80
         ? Colors.red
         : value >= 60
-            ? Colors.orange
-            : Colors.green;
+        ? Colors.orange
+        : Colors.green;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -101,8 +115,10 @@ class _MiniBar extends StatelessWidget {
           ),
           SizedBox(
             width: 48,
-            child: Text('${value.toStringAsFixed(0)} %',
-                textAlign: TextAlign.right),
+            child: Text(
+              '${value.toStringAsFixed(0)} %',
+              textAlign: TextAlign.right,
+            ),
           ),
         ],
       ),
