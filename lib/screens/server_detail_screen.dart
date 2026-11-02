@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../models/incident.dart';
 import '../models/metric.dart';
 import '../models/server.dart';
 import '../services/api_service.dart';
@@ -19,6 +20,7 @@ class ServerDetailScreen extends StatefulWidget {
 class _ServerDetailScreenState extends State<ServerDetailScreen> {
   late Server _server;
   List<Metric> _metrics = [];
+  List<Incident> _incidents = [];
   Timer? _timer;
 
   @override
@@ -41,10 +43,12 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     try {
       final server = await ApiService.fetchServer(id);
       final metrics = await ApiService.fetchMetrics(id);
+      final incidents = await ApiService.fetchIncidents(id);
       if (!mounted) return;
       setState(() {
         _server = server;
         _metrics = metrics;
+        _incidents = incidents;
       });
     } catch (_) {
       // on garde les dernières données affichées
@@ -74,6 +78,17 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     );
   }
 
+  String _two(int n) => n.toString().padLeft(2, '0');
+
+  String _formatDate(DateTime d) =>
+      '${_two(d.day)}/${_two(d.month)} ${_two(d.hour)}:${_two(d.minute)}';
+
+  String _formatDuration(int s) {
+    if (s < 60) return '$s s';
+    if (s < 3600) return '${s ~/ 60} min';
+    return '${s ~/ 3600} h ${(s % 3600) ~/ 60} min';
+  }
+
   @override
   Widget build(BuildContext context) {
     final server = _server;
@@ -81,7 +96,6 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(server.name),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -99,7 +113,9 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
                 Text(
                   server.online ? 'En ligne' : 'Hors ligne',
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -135,19 +151,52 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
                         borderData: FlBorderData(show: false),
                         titlesData: const FlTitlesData(
                           topTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                           rightTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                           bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                         ),
                         lineBarsData: [
-                          _line(_metrics.map((m) => m.cpu).toList(), Colors.blue),
-                          _line(_metrics.map((m) => m.ram).toList(), Colors.orange),
+                          _line(
+                            _metrics.map((m) => m.cpu).toList(),
+                            Colors.blue,
+                          ),
+                          _line(
+                            _metrics.map((m) => m.ram).toList(),
+                            Colors.orange,
+                          ),
                         ],
                       ),
                     ),
             ),
+            const SizedBox(height: 24),
+            const Text(
+              'Incidents',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            if (_incidents.isEmpty)
+              const Text('Aucun incident enregistré.')
+            else
+              for (final incident in _incidents)
+                Card(
+                  child: ListTile(
+                    leading: Icon(
+                      incident.ongoing
+                          ? Icons.error_rounded
+                          : Icons.check_circle_rounded,
+                      color: incident.ongoing ? Colors.red : Colors.green,
+                    ),
+                    title: Text(incident.ongoing ? 'En cours' : 'Résolu'),
+                    subtitle:
+                        Text('Depuis le ${_formatDate(incident.startedAt)}'),
+                    trailing: Text(_formatDuration(incident.durationSeconds)),
+                  ),
+                ),
           ],
         ),
       ),

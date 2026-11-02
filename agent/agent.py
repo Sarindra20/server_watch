@@ -24,6 +24,7 @@ def collect():
 
 
 def main():
+    print(f"Clé chargée : {'oui' if API_KEY else 'NON'} ({len(API_KEY)} caractères)")
     print(f"Agent démarré pour le serveur {SERVER_ID}, envoi toutes les {INTERVAL} s")
     while True:
         try:
@@ -31,6 +32,7 @@ def main():
             response = requests.post(
                 f"{API_URL}/servers/{SERVER_ID}/metrics",
                 json=metrics,
+                headers=HEADERS,
                 timeout=5,
             )
             print(f"Envoyé {metrics} -> {response.status_code}")
