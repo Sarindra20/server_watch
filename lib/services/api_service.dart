@@ -14,49 +14,45 @@ class ApiService {
 
   static const Map<String, String> _headers = {'X-API-Key': apiKey};
 
-  static Future<List<Server>> fetchServers() async {
+  static Future<dynamic> _getJson(String path) async {
     final response =
-        await http.get(Uri.parse('$baseUrl/servers'), headers: _headers);
+        await http.get(Uri.parse('$baseUrl$path'), headers: _headers);
     if (response.statusCode != 200) {
-      throw Exception('Erreur API : ${response.statusCode}');
+      throw Exception('GET $path -> code ${response.statusCode}');
     }
-    final decoded = jsonDecode(response.body);
-    if (decoded == null || decoded is! List) return [];
-    return decoded
+    if (response.body.isEmpty) {
+      throw Exception('GET $path -> réponse vide');
+    }
+    return jsonDecode(response.body);
+  }
+
+  static Future<List<Server>> fetchServers() async {
+    final data = await _getJson('/servers') as List<dynamic>;
+    return data
         .map((json) => Server.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
   static Future<Server> fetchServer(int id) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/servers/$id'), headers: _headers);
-    if (response.statusCode != 200) {
-      throw Exception('Erreur API : ${response.statusCode}');
-    }
-    final decoded = jsonDecode(response.body);
-    if (decoded == null || decoded is! Map) {
-      throw Exception('Réponse du serveur invalide ou vide');
-    }
-    return Server.fromJson(Map<String, dynamic>.from(decoded));
+    final data = await _getJson('/servers/$id');
+    return Server.fromJson(data as Map<String, dynamic>);
   }
 
   static Future<List<Metric>> fetchMetrics(int serverId,
       {int minutes = 30}) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/servers/$serverId/metrics?minutes=$minutes'),
-      headers: _headers,
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Erreur API : ${response.statusCode}');
-    }
-    
-    final decoded = jsonDecode(response.body);
-    if (decoded == null || decoded is! List) {
-      return [];
-    }
-
-    return decoded
+    final data =
+        await _getJson('/servers/$serverId/metrics?minutes=$minutes')
+            as List<dynamic>;
+    return data
         .map((json) => Metric.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<List<Incident>> fetchIncidents(int serverId) async {
+    final data =
+        await _getJson('/servers/$serverId/incidents') as List<dynamic>;
+    return data
+        .map((json) => Incident.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
@@ -67,7 +63,7 @@ class ApiService {
       body: jsonEncode({'name': name, 'ip': ip}),
     );
     if (response.statusCode != 201) {
-      throw Exception('Erreur API : ${response.statusCode}');
+      throw Exception('POST /servers -> code ${response.statusCode}');
     }
   }
 
@@ -77,26 +73,7 @@ class ApiService {
       headers: _headers,
     );
     if (response.statusCode != 204) {
-      throw Exception('Erreur API : ${response.statusCode}');
+      throw Exception('DELETE /servers/$id -> code ${response.statusCode}');
     }
-  }
-
-  static Future<List<Incident>> fetchIncidents(int serverId) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/servers/$serverId/incidents'),
-      headers: _headers,
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Erreur API : ${response.statusCode}');
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded == null || decoded is! List) {
-      return [];
-    }
-
-    return decoded
-        .map((json) => Incident.fromJson(json as Map<String, dynamic>))
-        .toList();
   }
 }
