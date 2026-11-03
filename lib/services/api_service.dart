@@ -76,4 +76,15 @@ class ApiService {
       throw Exception('DELETE /servers/$id -> code ${response.statusCode}');
     }
   }
+
+    static Future<void> updateServer(int id, String name, String ip) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/servers/$id'),
+      headers: {'Content-Type': 'application/json', 'X-API-Key': apiKey},
+      body: jsonEncode({'name': name, 'ip': ip}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('PUT /servers/$id -> code ${response.statusCode}');
+    }
+  }
 }

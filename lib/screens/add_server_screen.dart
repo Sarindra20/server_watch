@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../models/server.dart';
 
 class AddServerScreen extends StatefulWidget {
-  const AddServerScreen({super.key});
+  final Server? server; // renseigné quand on modifie un serveur existant
+
+  const AddServerScreen({super.key, this.server});
 
   @override
   State<AddServerScreen> createState() => _AddServerScreenState();
@@ -10,8 +13,17 @@ class AddServerScreen extends StatefulWidget {
 
 class _AddServerScreenState extends State<AddServerScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _ipController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _ipController;
+
+  bool get _editing => widget.server != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.server?.name ?? '');
+    _ipController = TextEditingController(text: widget.server?.ip ?? '');
+  }
 
   @override
   void dispose() {
@@ -23,12 +35,13 @@ class _AddServerScreenState extends State<AddServerScreen> {
   void _save() {
     if (_formKey.currentState!.validate()) {
       final server = Server(
+        id: widget.server?.id,
         name: _nameController.text.trim(),
         ip: _ipController.text.trim(),
-        online: true,
-        cpu: 0,
-        ram: 0,
-        disk: 0,
+        online: widget.server?.online ?? true,
+        cpu: widget.server?.cpu ?? 0,
+        ram: widget.server?.ram ?? 0,
+        disk: widget.server?.disk ?? 0,
       );
       Navigator.pop(context, server);
     }
@@ -38,8 +51,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter un serveur'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(_editing ? 'Modifier le serveur' : 'Ajouter un serveur'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -53,8 +65,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
                   labelText: 'Nom du serveur',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Entre un nom' : null,
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Entre un nom'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -63,15 +76,16 @@ class _AddServerScreenState extends State<AddServerScreen> {
                   labelText: 'Adresse IP',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Entre une adresse IP' : null,
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Entre une adresse IP'
+                    : null,
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _save,
-                  child: const Text('Enregistrer'),
+                  child: Text(_editing ? 'Mettre à jour' : 'Enregistrer'),
                 ),
               ),
             ],

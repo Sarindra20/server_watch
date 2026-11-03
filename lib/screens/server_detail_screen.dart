@@ -7,6 +7,7 @@ import '../models/incident.dart';
 import '../models/metric.dart';
 import '../models/server.dart';
 import '../services/api_service.dart';
+import 'add_server_screen.dart';
 
 class ServerDetailScreen extends StatefulWidget {
   final Server server;
@@ -53,13 +54,35 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     } catch (e) {
       debugPrint('Erreur de rafraîchissement : $e');
       if (!mounted) return;
-      // Affiche l'erreur en rouge en bas de l'écran si l'API bloque
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Erreur de rafraîchissement : $e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
+      );
+    }
+  }
+
+  Future<void> _edit() async {
+    final id = _server.id;
+    if (id == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final Server? updated = await Navigator.push<Server>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddServerScreen(server: _server),
+      ),
+    );
+    if (!mounted || updated == null) return;
+    try {
+      await ApiService.updateServer(id, updated.name, updated.ip);
+      await _refresh();
+    } catch (e) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Modification impossible')),
       );
     }
   }
@@ -105,6 +128,13 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(server.name),
+        actions: [
+          IconButton(
+            onPressed: _edit,
+            icon: const Icon(Icons.edit),
+            tooltip: 'Modifier',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

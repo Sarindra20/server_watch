@@ -9,8 +9,11 @@ import 'services/api_service.dart';
 import 'theme.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/server_card.dart';
+import 'theme_controller.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ThemeController.load();
   runApp(const ServerWatchApp());
 }
 
@@ -19,11 +22,18 @@ class ServerWatchApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ServerWatch',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      home: const HomeScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'ServerWatch',
+          debugShowCheckedModeBanner: false,
+          theme: buildTheme(Brightness.light),
+          darkTheme: buildTheme(Brightness.dark),
+          themeMode: mode,
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
@@ -100,7 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -121,14 +134,19 @@ class _HomeScreenState extends State<HomeScreen> {
             const AppLogo(size: 34),
             const SizedBox(width: 10),
             RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
                 children: [
                   TextSpan(
                     text: 'Server',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
-                  TextSpan(
+                  const TextSpan(
                     text: 'Watch',
                     style: TextStyle(color: kAccent),
                   ),
@@ -139,8 +157,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () => _loadServers(),
-            icon: const Icon(Icons.refresh),
+            onPressed: ThemeController.toggle,
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            tooltip: 'Changer de thème',
           ),
         ],
       ),
@@ -170,115 +193,110 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off, size: 48),
+                  const SizedBox(height: 12),
+                  Text(_error!, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => _loadServers(),
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+                  child: Row(
                     children: [
-                      const Icon(Icons.cloud_off, size: 48),
-                      const SizedBox(height: 12),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: () => _loadServers(),
-                        child: const Text('Réessayer'),
+                      Expanded(
+                        child: _summaryItem(
+                          'Total',
+                          total,
+                          Colors.blue,
+                          Icons.dns_rounded,
+                        ),
+                      ),
+                      Expanded(
+                        child: _summaryItem(
+                          'En ligne',
+                          online,
+                          Colors.green,
+                          Icons.check_circle_rounded,
+                        ),
+                      ),
+                      Expanded(
+                        child: _summaryItem(
+                          'Hors ligne',
+                          offline,
+                          Colors.red,
+                          Icons.error_rounded,
+                        ),
                       ),
                     ],
                   ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _summaryItem(
-                              'Total',
-                              total,
-                              Colors.blue,
-                              Icons.dns_rounded,
-                            ),
-                          ),
-                          Expanded(
-                            child: _summaryItem(
-                              'En ligne',
-                              online,
-                              Colors.green,
-                              Icons.check_circle_rounded,
-                            ),
-                          ),
-                          Expanded(
-                            child: _summaryItem(
-                              'Hors ligne',
-                              offline,
-                              Colors.red,
-                              Icons.error_rounded,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _servers.length,
-                        itemBuilder: (context, index) {
-                          final server = _servers[index];
-                          return Dismissible(
-                            key: ValueKey(server.id),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.only(right: 20),
-                              alignment: Alignment.centerRight,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(
-                                Icons.delete,
-                                color: Colors.white,
-                              ),
-                            ),
-                            onDismissed: (direction) async {
-                              setState(() {
-                                _servers.removeAt(index);
-                              });
-                              final messenger = ScaffoldMessenger.of(context);
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('${server.name} supprimé'),
-                                ),
-                              );
-                              try {
-                                await ApiService.deleteServer(server.id!);
-                              } catch (e) {
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Suppression impossible'),
-                                  ),
-                                );
-                                await _loadServers(silent: true);
-                              }
-                            },
-                            child: ServerCard(
-                              server: server,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ServerDetailScreen(server: server),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
                 ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _servers.length,
+                    itemBuilder: (context, index) {
+                      final server = _servers[index];
+                      return Dismissible(
+                        key: ValueKey(server.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.only(right: 20),
+                          alignment: Alignment.centerRight,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        onDismissed: (direction) async {
+                          setState(() {
+                            _servers.removeAt(index);
+                          });
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.showSnackBar(
+                            SnackBar(content: Text('${server.name} supprimé')),
+                          );
+                          try {
+                            await ApiService.deleteServer(server.id!);
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Suppression impossible'),
+                              ),
+                            );
+                            await _loadServers(silent: true);
+                          }
+                        },
+                        child: ServerCard(
+                          server: server,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ServerDetailScreen(server: server),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
