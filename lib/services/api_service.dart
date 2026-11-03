@@ -1,28 +1,66 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/incident.dart';
 import '../models/metric.dart';
 import '../models/server.dart';
 
+class UnauthorizedException implements Exception {
+  @override
+  String toString() => 'Session expirée, reconnecte-toi';
+}
+
 class ApiService {
   static const String baseUrl = 'http://127.0.0.1:8000';
 
-  // La clé est donnée au lancement, elle n'est pas écrite dans le code
-  static const String apiKey = String.fromEnvironment('API_KEY');
+  static String? _token;
+  static final ValueNotifier<bool> authenticated = ValueNotifier(false);
 
-  static const Map<String, String> _headers = {'X-API-Key': apiKey};
+  static Map<String, String> get _headers => {
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      };
+
+  static Map<String, String> get _jsonHeaders =>
+      {..._headers, 'Content-Type': 'application/json'};
+
+  static void logout() {
+    _token = null;
+    authenticated.value = false;
+  }
+
+  /// Renvoie false si l'identifiant ou le mot de passe est incorrect.
+  static Future<bool> login(String username, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'password': password}),
+    );
+    if (response.statusCode == 401) return false;
+    if (response.statusCode != 200) {
+      throw Exception('POST /auth/login -> code ${response.statusCode}');
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    _token = data['token'] as String;
+    authenticated.value = true;
+    return true;
+  }
+
+  static void _check(http.Response response, int expected, String label) {
+    if (response.statusCode == 401) {
+      logout();
+      throw UnauthorizedException();
+    }
+    if (response.statusCode != expected) {
+      throw Exception('$label -> code ${response.statusCode}');
+    }
+  }
 
   static Future<dynamic> _getJson(String path) async {
     final response =
         await http.get(Uri.parse('$baseUrl$path'), headers: _headers);
-    if (response.statusCode != 200) {
-      throw Exception('GET $path -> code ${response.statusCode}');
-    }
-    if (response.body.isEmpty) {
-      throw Exception('GET $path -> réponse vide');
-    }
+    _check(response, 200, 'GET $path');
     return jsonDecode(response.body);
   }
 
@@ -59,12 +97,19 @@ class ApiService {
   static Future<void> addServer(String name, String ip) async {
     final response = await http.post(
       Uri.parse('$baseUrl/servers'),
-      headers: {'Content-Type': 'application/json', 'X-API-Key': apiKey},
+      headers: _jsonHeaders,
       body: jsonEncode({'name': name, 'ip': ip}),
     );
-    if (response.statusCode != 201) {
-      throw Exception('POST /servers -> code ${response.statusCode}');
-    }
+    _check(response, 201, 'POST /servers');
+  }
+
+  static Future<void> updateServer(int id, String name, String ip) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/servers/$id'),
+      headers: _jsonHeaders,
+      body: jsonEncode({'name': name, 'ip': ip}),
+    );
+    _check(response, 200, 'PUT /servers/$id');
   }
 
   static Future<void> deleteServer(int id) async {
@@ -72,19 +117,6 @@ class ApiService {
       Uri.parse('$baseUrl/servers/$id'),
       headers: _headers,
     );
-    if (response.statusCode != 204) {
-      throw Exception('DELETE /servers/$id -> code ${response.statusCode}');
-    }
-  }
-
-    static Future<void> updateServer(int id, String name, String ip) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/servers/$id'),
-      headers: {'Content-Type': 'application/json', 'X-API-Key': apiKey},
-      body: jsonEncode({'name': name, 'ip': ip}),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('PUT /servers/$id -> code ${response.statusCode}');
-    }
+    _check(response, 204, 'DELETE /servers/$id');
   }
 }

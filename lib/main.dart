@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'screens/login_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import 'models/server.dart';
@@ -11,8 +13,14 @@ import 'widgets/app_logo.dart';
 import 'widgets/server_card.dart';
 import 'theme_controller.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ApiService.authenticated.addListener(() {
+    if (!ApiService.authenticated.value) {
+      navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    }
+  });
   await ThemeController.load();
   runApp(const ServerWatchApp());
 }
@@ -26,12 +34,17 @@ class ServerWatchApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'ServerWatch',
           debugShowCheckedModeBanner: false,
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           themeMode: mode,
-          home: const HomeScreen(),
+          home: ValueListenableBuilder<bool>(
+            valueListenable: ApiService.authenticated,
+            builder: (context, loggedIn, _) =>
+                loggedIn ? const HomeScreen() : const LoginScreen(),
+          ),
         );
       },
     );
@@ -164,6 +177,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   : Icons.dark_mode,
             ),
             tooltip: 'Changer de thème',
+          ),
+          IconButton(
+            onPressed: ApiService.logout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Se déconnecter',
           ),
         ],
       ),
