@@ -10,21 +10,33 @@ class ServerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Détermination de la couleur selon le CPU ou le statut en ligne/hors-ligne
+    final bool isCritical = server.online && server.cpu >= 90.0;
+    final bool isWarning = server.online && server.cpu >= 80.0 && server.cpu < 90.0;
+
     final Color statusColor = !server.online
         ? Colors.red.shade600
-        : server.inAlert
+        : isCritical
+        ? Colors.red.shade600
+        : isWarning
         ? Colors.orange.shade600
         : Colors.green.shade600;
+
     final String statusLabel = !server.online
         ? 'Hors ligne'
-        : server.inAlert
+        : isCritical
+        ? 'Critique'
+        : isWarning
         ? 'Alerte'
         : 'En ligne';
 
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: statusColor, width: 1),
+        side: BorderSide(
+          color: statusColor, 
+          width: (isCritical || isWarning) ? 2.0 : 1.0, // Bordure plus épaisse en cas d'alerte
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -95,9 +107,9 @@ class _MiniBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = value >= 80
+    final Color color = value >= 90
         ? Colors.red
-        : value >= 60
+        : value >= 80
         ? Colors.orange
         : Colors.green;
 

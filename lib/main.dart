@@ -3,7 +3,7 @@ import 'dart:async';
 import 'screens/login_screen.dart';
 
 import 'package:flutter/material.dart';
-
+import 'screens/stats_screen.dart';
 import 'models/server.dart';
 import 'screens/add_server_screen.dart';
 import 'screens/server_detail_screen.dart';
@@ -204,8 +204,22 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        actions: [
-          // NOUVEAU : Bouton Paramètres
+      actions: [
+          // NOUVEAU : Bouton Statistiques Globales
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StatsScreen(servers: _servers),
+                ),
+              );
+            },
+            icon: const Icon(Icons.bar_chart_rounded),
+            tooltip: 'Statistiques globales',
+          ),
+
+          // Bouton Paramètres existant
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -216,24 +230,8 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.settings),
             tooltip: 'Paramètres',
           ),
-
-          // Bouton thème existant
-          IconButton(
-            onPressed: ThemeController.toggle,
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            tooltip: 'Changer de thème',
-          ),
-
-          // Bouton déconnexion existant
-          IconButton(
-            onPressed: ApiService.logout,
-            icon: const Icon(Icons.logout),
-            tooltip: 'Se déconnecter',
-          ),
+          
+          // ... tes autres boutons (thème, déconnexion)
         ],
       ),
       floatingActionButton: FloatingActionButton(
