@@ -12,7 +12,7 @@ import 'theme.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/server_card.dart';
 import 'theme_controller.dart';
-
+import 'screens/settings_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,7 +61,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Server> _servers = []; // Liste complète récupérée de l'API
   List<Server> _filteredServers = []; // Liste affichée après filtre/tri
-  
+
   // Nouveaux états pour la recherche et le tri
   String _searchQuery = '';
   String _sortBy = 'name'; // 'name', 'status', 'cpu'
@@ -205,6 +205,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // NOUVEAU : Bouton Paramètres
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+            icon: const Icon(Icons.settings),
+            tooltip: 'Paramètres',
+          ),
+
+          // Bouton thème existant
           IconButton(
             onPressed: ThemeController.toggle,
             icon: Icon(
@@ -214,6 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             tooltip: 'Changer de thème',
           ),
+
+          // Bouton déconnexion existant
           IconButton(
             onPressed: ApiService.logout,
             icon: const Icon(Icons.logout),
@@ -299,7 +314,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // --- BARRE DE RECHERCHE ET MENU DE TRI ---
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       // Champ de saisie pour la recherche
@@ -311,7 +329,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12.0),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
                             isDense: true,
                           ),
                           onChanged: (value) {
@@ -325,7 +345,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Theme.of(context).dividerColor),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
                           borderRadius: BorderRadius.circular(12.0),
                         ),
                         child: DropdownButton<String>(
@@ -333,7 +355,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           underline: const SizedBox(),
                           items: const [
                             DropdownMenuItem(value: 'name', child: Text('Nom')),
-                            DropdownMenuItem(value: 'status', child: Text('Statut')),
+                            DropdownMenuItem(
+                              value: 'status',
+                              child: Text('Statut'),
+                            ),
                             DropdownMenuItem(value: 'cpu', child: Text('CPU')),
                           ],
                           onChanged: (value) {
@@ -357,7 +382,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             'Aucun serveur trouvé',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         )
@@ -377,17 +404,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.red,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: const Icon(Icons.delete, color: Colors.white),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
                               ),
                               onDismissed: (direction) async {
                                 // On retire localement des deux listes pour éviter un décalage
                                 setState(() {
-                                  _servers.removeWhere((s) => s.id == server.id);
+                                  _servers.removeWhere(
+                                    (s) => s.id == server.id,
+                                  );
                                   _filteredServers.removeAt(index);
                                 });
                                 final messenger = ScaffoldMessenger.of(context);
                                 messenger.showSnackBar(
-                                  SnackBar(content: Text('${server.name} supprimé')),
+                                  SnackBar(
+                                    content: Text('${server.name} supprimé'),
+                                  ),
                                 );
                                 try {
                                   await ApiService.deleteServer(server.id!);

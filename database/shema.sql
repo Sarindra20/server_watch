@@ -13,6 +13,12 @@ CREATE TABLE metrics (
     disk        REAL NOT NULL,
     recorded_at TIMESTAMP NOT NULL DEFAULT now()
 );
+CREATE TABLE users (
+    id            SERIAL PRIMARY KEY,
+    username      VARCHAR(50) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT now()
+);
 
 CREATE INDEX idx_metrics_server_time ON metrics (server_id, recorded_at DESC);
 

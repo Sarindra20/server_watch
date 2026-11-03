@@ -87,3 +87,38 @@ flutter run -d chrome
 - Graphique d'historique des mesures
 - Notifications push quand un serveur tombe
 - Authentification de l'API
+
+# ServerWatch 🖥️📱
+
+**ServerWatch** est une application mobile de supervision de serveurs développée en **Flutter** (frontend) connectée à une API **FastAPI / Python** (backend) sécurisée par une base de données **PostgreSQL**.
+
+## Fonctionnalités principales
+- 🔐 **Authentification sécurisée** (Connexion par identifiant et mot de passe haché).
+- 📊 **Tableau de bord en temps réel** (Suivi du CPU, de la RAM et du statut en ligne/hors ligne rafraîchi automatiquement).
+- 🔍 **Recherche et Tri instantanés** (Filtrage par nom et tri par nom, statut ou charge CPU).
+- 🌙 **Mode sombre / Mode clair** (Basculement dynamique des thèmes).
+- ➕ **Gestion des serveurs** (Ajout de nouveaux serveurs et suppression par geste *Swipe*).
+
+---
+
+## Captures d'écran
+
+| Tableau de bord | Détails du serveur | Écran de Connexion |
+| :---: | :---: | :---: |
+| *(Insérer l'image ici)* | *(Insérer l'image ici)* | *(Insérer l'image ici)* |
+
+---
+
+## Installation & Lancement
+
+### 1. Configuration de la Base de Données & API (Backend)
+```bash
+cd api
+# Installer les dépendances Python
+pip install -r requirements.txt
+
+# Créer un utilisateur administrateur
+python create_user.py
+
+# Lancer l'API avec Uvicorn
+python -m uvicorn main:app --reload
