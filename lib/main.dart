@@ -59,7 +59,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Server> _servers = [];
+  List<Server> _servers = []; // Liste complète récupérée de l'API
+  List<Server> _filteredServers = []; // Liste affichée après filtre/tri
+  
+  // Nouveaux états pour la recherche et le tri
+  String _searchQuery = '';
+  String _sortBy = 'name'; // 'name', 'status', 'cpu'
+
   bool _loading = true;
   String? _error;
   Timer? _timer;
@@ -80,6 +86,34 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // Fonction pour appliquer le filtre et le tri sur _servers vers _filteredServers
+  void _updateFilterAndSort() {
+    // 1. Filtrage par nom ou IP
+    List<Server> temp = _servers.where((server) {
+      final nameLower = server.name.toLowerCase();
+      final queryLower = _searchQuery.toLowerCase();
+      return nameLower.contains(queryLower);
+    }).toList();
+
+    // 2. Tri des résultats
+    temp.sort((a, b) {
+      if (_sortBy == 'name') {
+        return a.name.compareTo(b.name);
+      } else if (_sortBy == 'status') {
+        // En ligne en premier (true > false)
+        return b.online.toString().compareTo(a.online.toString());
+      } else if (_sortBy == 'cpu') {
+        // Tri par CPU décroissant (le plus fort en haut)
+        return b.cpu.compareTo(a.cpu);
+      }
+      return 0;
+    });
+
+    setState(() {
+      _filteredServers = temp;
+    });
+  }
+
   Future<void> _loadServers({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -95,6 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
         _error = null;
       });
+      // Met à jour la liste affichée en conservant la recherche et le tri en cours
+      _updateFilterAndSort();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -228,6 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : Column(
               children: [
+                // Cartes de résumé (Total, En ligne, Hors ligne)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
                   child: Row(
@@ -259,59 +296,125 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _servers.length,
-                    itemBuilder: (context, index) {
-                      final server = _servers[index];
-                      return Dismissible(
-                        key: ValueKey(server.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.only(right: 20),
-                          alignment: Alignment.centerRight,
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(16),
+
+                // --- BARRE DE RECHERCHE ET MENU DE TRI ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Champ de saisie pour la recherche
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Rechercher un serveur...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                            isDense: true,
                           ),
-                          child: const Icon(Icons.delete, color: Colors.white),
+                          onChanged: (value) {
+                            _searchQuery = value;
+                            _updateFilterAndSort();
+                          },
                         ),
-                        onDismissed: (direction) async {
-                          setState(() {
-                            _servers.removeAt(index);
-                          });
-                          final messenger = ScaffoldMessenger.of(context);
-                          messenger.showSnackBar(
-                            SnackBar(content: Text('${server.name} supprimé')),
-                          );
-                          try {
-                            await ApiService.deleteServer(server.id!);
-                          } catch (e) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Suppression impossible'),
+                      ),
+                      const SizedBox(width: 8),
+                      // Menu déroulant pour le tri
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Theme.of(context).dividerColor),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: DropdownButton<String>(
+                          value: _sortBy,
+                          underline: const SizedBox(),
+                          items: const [
+                            DropdownMenuItem(value: 'name', child: Text('Nom')),
+                            DropdownMenuItem(value: 'status', child: Text('Statut')),
+                            DropdownMenuItem(value: 'cpu', child: Text('CPU')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _sortBy = value;
+                                _updateFilterAndSort();
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // --- LISTE DES SERVEURS FILTRÉS ---
+                Expanded(
+                  child: _filteredServers.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aucun serveur trouvé',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _filteredServers.length,
+                          itemBuilder: (context, index) {
+                            final server = _filteredServers[index];
+                            return Dismissible(
+                              key: ValueKey(server.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.only(right: 20),
+                                alignment: Alignment.centerRight,
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(Icons.delete, color: Colors.white),
                               ),
-                            );
-                            await _loadServers(silent: true);
-                          }
-                        },
-                        child: ServerCard(
-                          server: server,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ServerDetailScreen(server: server),
+                              onDismissed: (direction) async {
+                                // On retire localement des deux listes pour éviter un décalage
+                                setState(() {
+                                  _servers.removeWhere((s) => s.id == server.id);
+                                  _filteredServers.removeAt(index);
+                                });
+                                final messenger = ScaffoldMessenger.of(context);
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text('${server.name} supprimé')),
+                                );
+                                try {
+                                  await ApiService.deleteServer(server.id!);
+                                } catch (e) {
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Suppression impossible'),
+                                    ),
+                                  );
+                                  await _loadServers(silent: true);
+                                }
+                              },
+                              child: ServerCard(
+                                server: server,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ServerDetailScreen(server: server),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
