@@ -3,19 +3,27 @@ import 'dart:async';
 import 'screens/login_screen.dart';
 
 import 'package:flutter/material.dart';
+
 import 'screens/stats_screen.dart';
 import 'models/server.dart';
 import 'screens/add_server_screen.dart';
 import 'screens/server_detail_screen.dart';
 import 'services/api_service.dart';
+import 'services/notification_service.dart';
 import 'theme.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/server_card.dart';
 import 'theme_controller.dart';
 import 'screens/settings_screen.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisation du service de notification en arrière-plan
+  await NotificationService.init();
+
   ApiService.authenticated.addListener(() {
     if (!ApiService.authenticated.value) {
       navigatorKey.currentState?.popUntil((route) => route.isFirst);
@@ -123,13 +131,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     try {
       final servers = await ApiService.fetchServers();
+
+      // --- VÉRIFICATION DES ALERTES EN ARRIÈRE-PLAN ---
+      for (var server in servers) {
+        // Si le serveur est hors ligne ou dépasse 90% de CPU
+        if (!server.online) {
+          NotificationService.showServerAlert(
+            server.name,
+            'Le serveur est actuellement HORS LIGNE !',
+          );
+        } else if (server.cpu >= 90.0) {
+          NotificationService.showServerAlert(
+            server.name,
+            'Surchauffe critique du CPU : ${server.cpu.toStringAsFixed(1)}%',
+          );
+        }
+      }
+      // ------------------------------------------------
+
       if (!mounted) return;
       setState(() {
         _servers = servers;
         _loading = false;
         _error = null;
       });
-      // Met à jour la liste affichée en conservant la recherche et le tri en cours
       _updateFilterAndSort();
     } catch (e) {
       if (!mounted) return;
@@ -204,8 +229,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      actions: [
-          // NOUVEAU : Bouton Statistiques Globales
+        actions: [
+          // Bouton Statistiques Globales
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -219,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Statistiques globales',
           ),
 
-          // Bouton Paramètres existant
+          // Bouton Paramètres
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -230,8 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.settings),
             tooltip: 'Paramètres',
           ),
-          
-          // ... tes autres boutons (thème, déconnexion)
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -318,7 +341,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Champ de saisie pour la recherche
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
@@ -339,7 +361,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Menu déroulant pour le tri
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
@@ -373,80 +394,96 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // --- LISTE DES SERVEURS FILTRÉS ---
+                // --- LISTE DES SERVEURS FILTRÉS (AVEC PULL-TO-REFRESH) ---
                 Expanded(
-                  child: _filteredServers.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Aucun serveur trouvé',
-                            style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _filteredServers.length,
-                          itemBuilder: (context, index) {
-                            final server = _filteredServers[index];
-                            return Dismissible(
-                              key: ValueKey(server.id),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                padding: const EdgeInsets.only(right: 20),
-                                alignment: Alignment.centerRight,
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              onDismissed: (direction) async {
-                                // On retire localement des deux listes pour éviter un décalage
-                                setState(() {
-                                  _servers.removeWhere(
-                                    (s) => s.id == server.id,
-                                  );
-                                  _filteredServers.removeAt(index);
-                                });
-                                final messenger = ScaffoldMessenger.of(context);
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text('${server.name} supprimé'),
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await _loadServers(silent: true);
+                    },
+                    child: _filteredServers.isEmpty
+                        ? ListView(
+                            // Permet au RefreshIndicator de fonctionner même si la liste est vide
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              const SizedBox(height: 100),
+                              Center(
+                                child: Text(
+                                  'Aucun serveur trouvé',
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
-                                );
-                                try {
-                                  await ApiService.deleteServer(server.id!);
-                                } catch (e) {
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Suppression impossible'),
-                                    ),
-                                  );
-                                  await _loadServers(silent: true);
-                                }
-                              },
-                              child: ServerCard(
-                                server: server,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ServerDetailScreen(server: server),
-                                    ),
-                                  );
-                                },
+                                ),
                               ),
-                            );
-                          },
-                        ),
+                            ],
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _filteredServers.length,
+                            itemBuilder: (context, index) {
+                              final server = _filteredServers[index];
+                              return Dismissible(
+                                key: ValueKey(server.id),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  padding: const EdgeInsets.only(right: 20),
+                                  alignment: Alignment.centerRight,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                onDismissed: (direction) async {
+                                  setState(() {
+                                    _servers.removeWhere(
+                                      (s) => s.id == server.id,
+                                    );
+                                    _filteredServers.removeAt(index);
+                                  });
+                                  final messenger = ScaffoldMessenger.of(
+                                    context,
+                                  );
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('${server.name} supprimé'),
+                                    ),
+                                  );
+                                  try {
+                                    await ApiService.deleteServer(server.id!);
+                                  } catch (e) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Suppression impossible'),
+                                      ),
+                                    );
+                                    await _loadServers(silent: true);
+                                  }
+                                },
+                                child: ServerCard(
+                                  server: server,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ServerDetailScreen(server: server),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
                 ),
               ],
             ),
