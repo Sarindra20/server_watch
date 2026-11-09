@@ -103,11 +103,22 @@ flutter run -d chrome
 
 ## Captures d'écran
 
-| Tableau de bord | Détails du serveur | Écran de Connexion |
-| :---: | :---: | :---: |
-| *(Insérer l'image ici)* | *(Insérer l'image ici)* | *(Insérer l'image ici)* |
+## Captures d'écran
 
----
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/LoginClaire.png" width="200" alt="Connexion"><br>Connexion</td>
+    <td align="center"><img src="screenshots/ListeClaire.png" width="200" alt="Liste des serveurs"><br>Liste des serveurs</td>
+    <td align="center"><img src="screenshots/détailsClaire.png" width="200" alt="Détail d'un serveur"><br>Détail d'un serveur</td>
+    <td align="center"><img src="screenshots/AjoutClaire.png" width="200" alt="Ajout d'un serveur"><br>Ajout d'un serveur</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/triRechercheClaire.png" width="200" alt="Tri et recherche"><br>Tri et recherche</td>
+    <td align="center"><img src="screenshots/StatClaire.png" width="200" alt="Statistiques"><br>Statistiques</td>
+    <td align="center"><img src="screenshots/paramètre.png" width="200" alt="Mode sombre"><br>Mode sombre</td>
+    <td align="center"><img src="screenshots/parametreClaire.png" width="200" alt="Mode clair"><br>Mode clair</td>
+  </tr>
+</table>
 
 ## Installation & Lancement
 
